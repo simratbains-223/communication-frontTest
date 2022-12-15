@@ -1,0 +1,27 @@
+.input-message-container {
+  padding: 0.5rem;
+  width: 100%;
+}
+
+.input-message-form {
+  /* width: 100%; */
+  display: flex;
+  justify-content: space-between;
+  position: fixed;
+  bottom: 0;
+}
+
+.message-input {
+  width: 400px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  outline: none;
+  padding: 1rem;
+}
+
+.sendBtn {
+  width: 100px;
+  padding: 10px;
+  border-radius: 10px;
+  background-color: lightpink;
+}
