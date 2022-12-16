@@ -41,24 +41,23 @@ function HomePage() {
     };
   }, [socket, channelMessages]);
 
-  const handleAvatar = (event) => {
-    if (event.target) {
-      if (event.target.value === "") return;
-      console.log(event.target?.value);
-
-      setUser((prevData) => {
-        return { ...prevData, avatar: event.target.value };
-      });
-    }
-  };
-
   const handleUserName = (event) => {
     if (event.target) {
-      console.log(event.target.value);
+      //console.dir(event.target);
+      //console.log(event.target[event.target.selectedIndex].label);
+
+      const userAvatar =
+        event.target[event.target.selectedIndex].label.split(" ")?.[0];
+
       if (event.target.value === "") return;
       //console.log(event.currentTarget.value);
       setUser((prevData) => {
-        return { ...prevData, user_name: event.target.value };
+        return {
+          ...prevData,
+          id: event.target.selectedIndex,
+          user_name: event.target.value,
+          avatar: userAvatar,
+        };
       });
     }
   };
@@ -75,6 +74,7 @@ function HomePage() {
     };
 
     sendMessage(sendMsg);
+    messageInput.current.value = "";
   };
 
   const handleJoinChannel = () => {
@@ -90,7 +90,7 @@ function HomePage() {
       ...tempMessage,
       channel_id: channelId,
       channel_name: channelName,
-      user_id: 1,
+      user_id: user.id,
       avatar: user.avatar,
       user_name: user.user_name,
     };
@@ -112,17 +112,11 @@ function HomePage() {
   return (
     <div className='MessageTest'>
       <div>
-        <select onChange={handleAvatar}>
-          <option value=''>-avatar-</option>
-          <option value='👻'>👻</option>
-          <option value='😺'>😺</option>
-          <option value='👽'>👽</option>
-        </select>
         <select onChange={handleUserName}>
           <option value=''>-name-</option>
-          <option value='Alex'>Alex</option>
-          <option value='Becky'>Becky</option>
-          <option value='Clara'>Clara</option>
+          <option value='Aaron'>👻 Aaron</option>
+          <option value='Allen'>😺 Allen</option>
+          <option value='Andrew'>🤖 Andrew</option>
         </select>
       </div>
       <form id='msg-form' onSubmit={handleSendMessage}>

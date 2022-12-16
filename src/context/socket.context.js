@@ -16,10 +16,6 @@ const socket = io.connect("http://localhost:4000", {
 });
 export const SocketContext = createContext(socket);
 
-// socket.on("disconnect", () => {
-//   console.log("Socket server disconnected");
-// });
-
 export const SocketProvider = ({ children }) => {
   const [channelUsers, setChannelUsers] = useState(null);
   const [channelMessages, setChannelMessages] = useState([]);
@@ -35,7 +31,10 @@ export const SocketProvider = ({ children }) => {
   function joinChannel(joinMessage) {
     socket.emit(MESSAGE_TYPE.JOIN_CHANNEL, joinMessage);
     socket.on(MESSAGE_TYPE.JOIN_CHANNEL, (messages) => {
-      setChannelMessages(messages);
+      if (messages) {
+        console.log(messages);
+        setChannelMessages(messages);
+      }
     });
   }
 
