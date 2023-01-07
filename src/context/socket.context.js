@@ -1,4 +1,4 @@
-import { createContext, useState } from "react";
+import { createContext, useState, useEffect } from "react";
 import { io } from "socket.io-client";
 
 export const MESSAGE_TYPE = {
@@ -20,32 +20,76 @@ export const SocketProvider = ({ children }) => {
   const [channelUsers, setChannelUsers] = useState(null);
   const [channelMessages, setChannelMessages] = useState([]);
 
+  const handleReceiveMessage = (message) => {
+    //console.log("Received message", message);
+    setChannelMessages((prevMessages) => [...prevMessages, message]);
+  };
+
+  const handleChannelMessages = (messages) => {
+    //console.log("getting channel messages", messages);
+    setChannelMessages(messages);
+  };
+
+  const handleDeletedMessage = (deletedMsgId) => {
+    //console.log("getting delete message from server: ", deletedMsgId);
+    const deletedMsg = channelMessages.find((msg) => msg.id === deletedMsgId);
+    if (deletedMsg) {
+      //Exclude deleted message
+      deletedMsg.inactive = true;
+      const activeMessages = channelMessages.filter((msg) => !msg.inactive);
+      setChannelMessages(activeMessages);
+    }
+  };
+
+  useEffect(() => {
+    socket.on(MESSAGE_TYPE.JOIN_CHANNEL, handleChannelMessages);
+    return () => {
+      socket.off(MESSAGE_TYPE.JOIN_CHANNEL, handleChannelMessages);
+    };
+  }, []);
+
+  useEffect(() => {
+    socket.on(MESSAGE_TYPE.RECEIVE_MESSAGE, handleReceiveMessage);
+    socket.on(MESSAGE_TYPE.DELETE_MESSAGE, handleDeletedMessage);
+    return () => {
+      socket.off(MESSAGE_TYPE.RECEIVE_MESSAGE, handleReceiveMessage);
+      socket.off(MESSAGE_TYPE.DELETE_MESSAGE, handleDeletedMessage);
+    };
+  }, [channelMessages]);
+
+  useEffect(() => {
+    socket.on(MESSAGE_TYPE.CHANNEL_USERS, (responseData) =>
+      setChannelUsers(responseData)
+    );
+    return () => {
+      socket.off(MESSAGE_TYPE.CHANNEL_USERS, (responseData) =>
+        setChannelUsers(responseData)
+      );
+    };
+  }, [channelUsers]);
+
   function getChannelUsers() {
     socket.emit(MESSAGE_TYPE.CHANNEL_USERS);
-    socket.on(MESSAGE_TYPE.CHANNEL_USERS, (responseData) => {
-      //console.log("Channel users: ", responseData);
-      setChannelUsers(responseData);
-    });
   }
 
   function joinChannel(joinMessage) {
     socket.emit(MESSAGE_TYPE.JOIN_CHANNEL, joinMessage);
-    socket.on(MESSAGE_TYPE.JOIN_CHANNEL, (messages) => {
-      if (messages) {
-        console.log(messages);
-        setChannelMessages(messages);
-      }
-    });
   }
 
   function sendMessage(message) {
+    console.log("Sending message: ", message);
     socket.emit(MESSAGE_TYPE.SEND_MESSAGE, message);
     return;
   }
 
-  function leaveChannel() {
-    socket.emit(MESSAGE_TYPE.LEAVE_CHANNEL);
-    return;
+  function deleteMessage(channel_id, messageId) {
+    console.log("Deleting message: ", messageId);
+    socket.emit(MESSAGE_TYPE.DELETE_MESSAGE, channel_id, messageId);
+  }
+
+  function leaveChannel(message) {
+    socket.emit(MESSAGE_TYPE.LEAVE_CHANNEL, message);
+    setChannelMessages(null);
   }
 
   return (
@@ -58,6 +102,7 @@ export const SocketProvider = ({ children }) => {
         getChannelUsers,
         joinChannel,
         sendMessage,
+        deleteMessage,
         leaveChannel,
       }}
     >

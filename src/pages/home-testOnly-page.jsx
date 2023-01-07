@@ -1,5 +1,5 @@
-import { useContext, useRef, useState, useEffect, useCallback } from "react";
-import { SocketContext, MESSAGE_TYPE } from "../context/socket.context";
+import { useContext, useRef, useState } from "react";
+import { SocketContext } from "../context/socket.context";
 import "./home-testOnly-page.css";
 
 function HomePage() {
@@ -7,7 +7,13 @@ function HomePage() {
     channel_id: 0,
     channel_name: "",
   });
-  const [user, setUser] = useState({ id: 0, user_name: "", avatar: "" });
+
+  const [currentUser, setCurrentUser] = useState({
+    id: 0,
+    user_name: "",
+    avatar: "",
+  });
+
   const [tempMessage, setTempMessage] = useState({
     channel_id: 0,
     channel_name: "",
@@ -15,43 +21,30 @@ function HomePage() {
     user_name: "",
     avatar: "",
   });
+
   const {
-    socket,
     channelUsers,
-    getChannelUsers,
     channelMessages,
-    setChannelMessages,
     joinChannel,
     sendMessage,
+    deleteMessage,
     leaveChannel,
   } = useContext(SocketContext);
 
+  // These are only for testing purposes
   const messageInput = useRef();
   const channelInput = useRef();
   const messageWindow = useRef();
 
-  useEffect(() => {
-    const handleReceiveMessage = (message) =>
-      setChannelMessages((prevData) => [...prevData, message]);
-
-    socket.on(MESSAGE_TYPE.RECEIVE_MESSAGE, handleReceiveMessage);
-
-    return () => {
-      socket.off(MESSAGE_TYPE.RECEIVE_MESSAGE, handleReceiveMessage);
-    };
-  }, [socket, channelMessages]);
-
+  // Temporarily setting user info - later: using user info after login
   const handleUserName = (event) => {
     if (event.target) {
-      //console.dir(event.target);
-      //console.log(event.target[event.target.selectedIndex].label);
-
       const userAvatar =
         event.target[event.target.selectedIndex].label.split(" ")?.[0];
 
       if (event.target.value === "") return;
-      //console.log(event.currentTarget.value);
-      setUser((prevData) => {
+
+      setCurrentUser((prevData) => {
         return {
           ...prevData,
           id: event.target.selectedIndex,
@@ -68,45 +61,62 @@ function HomePage() {
     if (currentChannel.channel_name === "") {
       return;
     }
+    // fill up message
     const sendMsg = {
       ...tempMessage,
       message: messageInput.current.value,
     };
 
+    //Context Library- sendMessage
     sendMessage(sendMsg);
     messageInput.current.value = "";
   };
 
   const handleJoinChannel = () => {
-    if (user.user_name === "") return;
+    if (currentUser.user_name === "") return;
+    //Get channelId and channelName
     const channelId = parseInt(channelInput.current.value);
     const channelName = `Channel ${channelId}`;
-    console.log("Join: " + channelName);
-    setCurrentChannel((prevValue) => {
-      return { ...prevValue, channel_id: channelId, channel_name: channelName };
-    });
 
+    //Check if the channel is already joined
+    if (currentChannel && currentChannel.channel_id === channelId) {
+      console.log("Already joined: " + channelName);
+      return;
+    }
+
+    //Fill up channelID, channelName, userID, userName
     const sendMessage = {
       ...tempMessage,
       channel_id: channelId,
       channel_name: channelName,
-      user_id: user.id,
-      avatar: user.avatar,
-      user_name: user.user_name,
+      user_id: currentUser.id,
+      user_name: currentUser.user_name,
+      avatar: currentUser.avatar,
     };
-
+    //Save basic message info to useState
     setTempMessage(sendMessage);
 
+    console.log("Join: " + channelName);
+
+    //Context Library- joinChannel
     joinChannel(sendMessage);
+
+    //Save current channel to useState
+    setCurrentChannel((prevValue) => {
+      return { ...prevValue, channel_id: channelId, channel_name: channelName };
+    });
   };
 
   const handleLeaveChannel = () => {
-    leaveChannel();
-    console.log("Leave channel");
+    //Context Library- leaveChannel
+    leaveChannel(tempMessage);
+    setCurrentChannel(null);
+    console.log("Leave channel", tempMessage);
   };
 
-  const handleGetChannelUsers = () => {
-    getChannelUsers();
+  const handleDeleteMessage = (msgId) => {
+    //Context Library- deleteMessage
+    deleteMessage(currentChannel.channel_id, msgId);
   };
 
   return (
@@ -123,31 +133,35 @@ function HomePage() {
         <input ref={messageInput} id='msg-input' autoComplete='off' />
         <button type='submit'>Send</button>
       </form>
-      <input ref={channelInput} id='channel_id' type='number'></input>
-      {/* <input type='text' placeholder='User name' ref={userNameInput} /> */}
+      <input ref={channelInput} id='channel_id' type='number' min='0'></input>
       <button type='button' onClick={handleJoinChannel}>
         Join
       </button>
       <button type='button' onClick={handleLeaveChannel}>
         Leave
       </button>
-      <button type='button' onClick={handleGetChannelUsers}>
+      {/* <button type='button' onClick={handleGetChannelUsers}>
         channel users
-      </button>
+      </button> */}
       <div>
         {channelUsers
-          ? channelUsers.users[currentChannel.channel_name].map((user, idx) => (
-              <p key={idx}>{user.user_name}</p>
-            ))
+          ? channelUsers.users[currentChannel?.channel_name]?.map(
+              (currentUser, idx) => <p key={idx}>{currentUser.user_name}</p>
+            )
           : null}
       </div>
       <div className='message-window' ref={messageWindow}>
         <ul>
           {channelMessages
             ? channelMessages.map((msg, idx) => (
-                <li
-                  key={idx}
-                >{`${msg.avatar} ${msg.user_name}: ${msg.message}`}</li>
+                <li key={idx}>
+                  {`${msg.avatar} ${msg.user_name}: ${msg.message}`}{" "}
+                  {msg.user_id === currentUser.id ? (
+                    <button onClick={() => handleDeleteMessage(msg.id)}>
+                      Del
+                    </button>
+                  ) : null}
+                </li>
               ))
             : null}
         </ul>

@@ -11,8 +11,8 @@ export default function App() {
       <Routes>
         <Route path='/' element={<Menu />}>
           <Route index element={<HomePage />} />
-          <Route path='/chat' element={<ChatPage />} />
           <Route path='/login' element={<LoginPage />} />
+          <Route path='/chat' element={<ChatPage />} />
         </Route>
       </Routes>
     </div>
